@@ -1,0 +1,2018 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Farmer Assisting Bot — Smart Farming Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#4ade80;--gold:#fbbf24;--sky:#38bdf8;--red:#f87171;
+  --bg:#050d06;--card:rgba(255,255,255,0.04);
+  --border:rgba(74,222,128,0.13);--text:#f0fdf4;--muted:#86efac;
+}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;}
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.red-glow {
+  border-color: rgba(248,113,113,0.3);
+  box-shadow: 0 0 20px rgba(248,113,113,0.1);
+}
+
+.alert-item {
+  background: rgba(248,113,113,0.15);
+  padding: 10px;
+  margin: 6px 0;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.analysis-item {
+  background: rgba(74,222,128,0.1);
+  padding: 10px;
+  margin: 6px 0;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.bot-notify-stack{
+  position:absolute;
+  top:18px;
+  right:18px;
+  width:min(360px,calc(100% - 36px));
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  z-index:40;
+  pointer-events:none;
+}
+.bot-notify{
+  pointer-events:auto;
+  background:linear-gradient(180deg,rgba(12,31,14,0.96),rgba(7,20,9,0.96));
+  border:1px solid rgba(74,222,128,0.25);
+  border-radius:14px;
+  padding:14px;
+  box-shadow:0 18px 40px rgba(0,0,0,0.35);
+  animation:bub 0.25s cubic-bezier(0.16,1,0.3,1) both;
+}
+.bot-notify-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+.bot-notify-tag{
+  font-size:10px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--green);
+  font-weight:700;
+}
+.bot-notify-time{
+  font-size:11px;
+  color:var(--muted);
+}
+.bot-notify-msg{
+  font-size:13px;
+  line-height:1.55;
+  color:var(--text);
+}
+.bot-notify-details{
+  margin-top:8px;
+  font-size:11px;
+  line-height:1.55;
+  color:var(--muted);
+  white-space:pre-wrap;
+}
+.bot-notify-actions{
+  margin-top:12px;
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+}
+.bot-notify-btn{
+  border-radius:8px;
+  padding:8px 12px;
+  font-size:12px;
+  font-family:'DM Sans',sans-serif;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.bot-notify-btn.keep{
+  background:rgba(255,255,255,0.05);
+  color:var(--muted);
+  border:1px solid var(--border);
+}
+.bot-notify-btn.undo{
+  background:rgba(248,113,113,0.12);
+  color:#fecaca;
+  border:1px solid rgba(248,113,113,0.3);
+}
+.bot-notify-btn:hover{
+  transform:translateY(-1px);
+}
+/* SIDEBAR */
+.sidebar{width:260px;flex-shrink:0;background:rgba(5,13,6,0.72);border-right:1px solid var(--border);display:flex;flex-direction:column;position:relative;z-index:20;backdrop-filter:blur(20px);overflow-y:auto;animation:slide-left 0.5s ease both;}
+@keyframes slide-left{from{transform:translateX(-20px);opacity:0;}to{transform:none;opacity:1;}}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.sb-logo{padding:22px 18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.sb-logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--green),#16a34a);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 18px rgba(74,222,128,0.35);flex-shrink:0;}
+.sb-logo h2{font-family:'Playfair Display',serif;font-size:13px;font-weight:900;line-height:1.3;}
+.sb-logo h2 span{color:var(--green);}
+.sb-logo small{font-size:10px;color:var(--muted);display:block;margin-top:2px;}
+.sb-profile{margin:14px 12px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-radius:14px;padding:14px;}
+.sb-avatar{width:44px;height:44px;background:linear-gradient(135deg,#166534,#4ade80);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:10px;border:2px solid rgba(74,222,128,0.3);overflow:hidden;}
+.sb-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.sb-name{font-size:15px;font-weight:700;margin-bottom:3px;}
+.sb-meta{font-size:11px;color:var(--muted);line-height:1.7;}
+.sb-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.25);border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--green);margin-top:8px;}
+.sb-nav{padding:8px 10px;}
+.sb-section-lbl{font-size:10px;font-weight:700;color:rgba(134,239,172,0.5);letter-spacing:0.1em;text-transform:uppercase;padding:10px 8px 6px;}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;border-radius:9px;padding:9px 12px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;text-align:left;margin-bottom:2px;}
+.nav-btn:hover{background:rgba(255,255,255,0.05);color:var(--text);}
+.nav-btn.active{background:rgba(74,222,128,0.12);color:var(--green);border:1px solid rgba(74,222,128,0.2);}
+.nav-icon{font-size:16px;width:22px;text-align:center;}
+.sb-weather{margin:0 12px 12px;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);border-radius:12px;padding:12px;}
+.sw-title{font-size:10px;font-weight:700;color:var(--sky);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;}
+.sw-temp{font-size:28px;font-weight:700;line-height:1;}
+.sw-desc{font-size:12px;color:var(--muted);margin-top:3px;}
+.sb-footer{margin-top:auto;padding:12px;border-top:1px solid var(--border);}
+.logout-btn{width:100%;padding:9px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all 0.2s;}
+.logout-btn:hover{border-color:#f87171;color:#f87171;}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;position:relative;z-index:10;overflow:hidden;}
+.topbar{padding:14px 22px;border-bottom:1px solid var(--border);background:rgba(5,13,6,0.6);backdrop-filter:blur(15px);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.tb-left{display:flex;align-items:center;gap:10px;}
+.status-dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0.5);}50%{box-shadow:0 0 0 6px rgba(74,222,128,0);}}
+.tb-status{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;}
+.tb-right{display:flex;align-items:center;gap:12px;justify-content:flex-end;flex-wrap:wrap;}
+.tb-tabs{display:flex;gap:4px;}
+.tb-tab{padding:6px 14px;background:transparent;border:1px solid transparent;border-radius:7px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.tb-tab.active{background:rgba(74,222,128,0.1);border-color:rgba(74,222,128,0.2);color:var(--green);}
+.tb-tab:hover{color:var(--text);}
+.lang-switch{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+#google_translate_element{min-width:120px;}
+.goog-te-gadget{font-family:'DM Sans',sans-serif!important;color:var(--muted)!important;font-size:11px!important;}
+.goog-te-gadget .goog-te-combo{
+  background:rgba(255,255,255,0.05)!important;
+  border:1px solid var(--border)!important;
+  border-radius:7px!important;
+  color:var(--text)!important;
+  font-family:'DM Sans',sans-serif!important;
+  font-size:11px!important;
+  padding:4px 6px!important;
+}
+body{top:0!important;}
+.goog-te-banner-frame.skiptranslate{display:none!important;}
+
+/* PANELS */
+.panel{display:none;flex:1;overflow:hidden;}
+.panel.active{display:flex;flex-direction:column;}
+#panel-chat{position:relative;}
+
+/* WELCOME + AI ORB ANIMATION */
+.welcome{max-width:680px;margin:20px auto;text-align:center;animation:welcome-in 0.8s ease both;}
+@keyframes welcome-in{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+
+/* JARVIS ORB — replaces waving hand */
+.jarvis-orb-wrap{display:flex;justify-content:center;margin-bottom:18px;}
+.jarvis-orb{width:72px;height:72px;position:relative;cursor:pointer;}
+.jarvis-orb svg{width:72px;height:72px;animation:orb-spin 8s linear infinite;}
+@keyframes orb-spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.orb-ring{fill:none;stroke:rgba(74,222,128,0.25);stroke-width:1.5;}
+.orb-ring-2{fill:none;stroke:rgba(74,222,128,0.15);stroke-width:1;animation:orb-spin 5s linear infinite reverse;}
+.orb-core{fill:rgba(74,222,128,0.08);stroke:rgba(74,222,128,0.5);stroke-width:1.5;}
+.orb-glow{animation:orb-pulse 2.5s ease-in-out infinite;}
+@keyframes orb-pulse{0%,100%{opacity:0.4;r:18;}50%{opacity:1;r:22;}}
+.orb-center-icon{font-size:26px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);animation:orb-icon-float 3s ease-in-out infinite;}
+@keyframes orb-icon-float{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-54%) scale(1.08);}}
+/* Scan lines around orb */
+.orb-scan{position:absolute;inset:-6px;border-radius:50%;border:1px solid transparent;border-top-color:rgba(74,222,128,0.6);animation:orb-scan-spin 2s linear infinite;}
+.orb-scan-2{position:absolute;inset:-12px;border-radius:50%;border:1px solid transparent;border-bottom-color:rgba(56,189,248,0.4);animation:orb-scan-spin 3.5s linear infinite reverse;}
+@keyframes orb-scan-spin{from{transform:rotate(0);}to{transform:rotate(360deg);}}
+
+.welcome h2{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;margin-bottom:8px;}
+.welcome h2 span{color:var(--green);}
+.welcome p{color:var(--muted);font-size:14px;max-width:440px;margin:0 auto 20px;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+.chip{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:100px;padding:8px 16px;font-size:12px;color:var(--muted);cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;}
+.chip:hover{background:rgba(74,222,128,0.1);border-color:var(--green);color:var(--green);}
+
+/* CHAT */
+.chatbox{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth;}
+.chatbox::-webkit-scrollbar{width:3px;}
+.chatbox::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.msg-row{display:flex;gap:8px;max-width:800px;}
+.msg-row.user{align-self:flex-end;flex-direction:row-reverse;}
+.av{width:30px;height:30px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;margin-top:4px;}
+.av.ai{background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);}
+.av.user{background:rgba(74,222,128,0.2);}
+.bubble{padding:11px 15px;border-radius:14px;font-size:13.5px;line-height:1.65;max-width:600px;animation:bub 0.3s cubic-bezier(0.16,1,0.3,1) both;}
+@keyframes bub{from{opacity:0;transform:scale(0.94) translateY(6px);}to{opacity:1;transform:none;}}
+.bubble.ai{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:4px 14px 14px 14px;}
+.bubble.user{background:linear-gradient(135deg,#4ade80,#16a34a);color:#000;font-weight:500;border-radius:14px 4px 14px 14px;}
+.bubble img{max-width:240px;border-radius:8px;display:block;margin-top:8px;}
+.typing{display:flex;align-items:center;gap:4px;padding:12px 15px;}
+.typing span{width:7px;height:7px;background:var(--muted);border-radius:50%;animation:typ 1.2s ease-in-out infinite;}
+.typing span:nth-child(2){animation-delay:0.2s;}
+.typing span:nth-child(3){animation-delay:0.4s;}
+@keyframes typ{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-6px);opacity:1;}}
+
+/* INPUT */
+.input-area{padding:14px 20px;border-top:1px solid var(--border);background:rgba(5,13,6,0.7);backdrop-filter:blur(15px);display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
+.input-row{display:flex;gap:8px;align-items:flex-end;}
+.input-wrap{flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;transition:all 0.2s;}
+.input-wrap:focus-within{border-color:var(--green);box-shadow:0 0 0 3px rgba(74,222,128,0.1);}
+#msgInput{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;resize:none;max-height:80px;}
+#msgInput::placeholder{color:rgba(134,239,172,0.3);}
+.iact{background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px;transition:color 0.2s,transform 0.2s;}
+.iact:hover{color:var(--green);transform:scale(1.15);}
+.iact.recording{color:#f87171;animation:rec-pulse 1s ease-in-out infinite;}
+@keyframes rec-pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.send-btn{width:44px;height:44px;flex-shrink:0;background:linear-gradient(135deg,var(--green),#16a34a);border:none;border-radius:10px;color:#000;font-size:18px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;}
+.send-btn:hover{transform:scale(1.06);box-shadow:0 5px 20px rgba(74,222,128,0.4);}
+.send-btn:disabled{opacity:0.3;transform:none;box-shadow:none;cursor:default;}
+.undo-chat-btn{height:44px;flex-shrink:0;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;padding:0 14px;cursor:pointer;transition:all 0.2s;}
+.undo-chat-btn:hover:not(:disabled){border-color:var(--green);color:var(--green);transform:translateY(-1px);}
+.undo-chat-btn:disabled{opacity:0.35;cursor:default;transform:none;}
+.img-preview{display:none;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--muted);}
+.img-preview.show{display:flex;}
+.img-preview img{height:36px;border-radius:5px;}
+.img-preview button{background:transparent;border:none;color:var(--red);cursor:pointer;font-size:16px;}
+
+/* JARVIS TTS BAR */
+.tts-bar{display:none;align-items:center;gap:8px;background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.2);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--sky);}
+.tts-bar.show{display:flex;}
+.tts-wave{display:flex;gap:2px;align-items:center;height:18px;}
+.tts-wave span{display:block;width:3px;background:var(--sky);border-radius:3px;animation:wave-bar 0.8s ease-in-out infinite;}
+.tts-wave span:nth-child(1){height:6px;animation-delay:0s;}
+.tts-wave span:nth-child(2){height:12px;animation-delay:0.1s;}
+.tts-wave span:nth-child(3){height:18px;animation-delay:0.2s;}
+.tts-wave span:nth-child(4){height:10px;animation-delay:0.3s;}
+.tts-wave span:nth-child(5){height:14px;animation-delay:0.4s;}
+@keyframes wave-bar{0%,100%{transform:scaleY(0.4);}50%{transform:scaleY(1);}}
+
+/* DASHBOARD / SCHEMES / WEATHER */
+.dash-grid{flex:1;overflow-y:auto;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;align-content:start;}
+.dash-grid::-webkit-scrollbar{width:3px;}
+.dash-grid::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.d-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;transition:all 0.25s;animation:card-fade 0.5s ease both;}
+@keyframes card-fade{from{opacity:0;transform:translateY(15px);}to{opacity:1;transform:none;}}
+.d-card:hover{transform:translateY(-3px);border-color:rgba(74,222,128,0.3);box-shadow:0 10px 30px rgba(0,0,0,0.3);}
+.d-card.wide{grid-column:span 2;}
+.d-card.green-glow{border-color:rgba(74,222,128,0.3);box-shadow:0 0 20px rgba(74,222,128,0.06);}
+.d-card.gold-glow{border-color:rgba(251,191,36,0.3);box-shadow:0 0 20px rgba(251,191,36,0.06);}
+.d-card.sky-glow{border-color:rgba(56,189,248,0.3);box-shadow:0 0 20px rgba(56,189,248,0.06);}
+.d-icon{font-size:26px;margin-bottom:10px;}
+.d-label{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.d-value{font-size:22px;font-weight:700;line-height:1;}
+.d-value span{font-size:12px;font-weight:400;color:var(--muted);}
+.d-sub{font-size:12px;color:var(--muted);margin-top:5px;}
+.scheme-card{background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:14px;margin-bottom:10px;}
+.scheme-name{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:5px;}
+.scheme-desc{font-size:12px;color:var(--muted);line-height:1.6;}
+.scheme-badge{display:inline-block;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.25);border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;color:var(--green);margin-top:8px;}
+.weather-big{background:linear-gradient(135deg,rgba(56,189,248,0.08),rgba(56,189,248,0.03));border:1px solid rgba(56,189,248,0.2);}
+.w-main{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.w-temp{font-size:42px;font-weight:700;color:var(--sky);}
+.w-icon{font-size:42px;}
+.w-details{display:flex;gap:14px;flex-wrap:wrap;}
+.w-detail{font-size:12px;color:var(--muted);}
+.w-detail strong{display:block;font-size:13px;color:var(--text);}
+#twinCanvas{width:100%;height:180px;border-radius:12px;background:#050d06;display:block;border:1px solid var(--border);margin-top:10px;}
+
+/* CAMERA BOTTOM-SHEET MODAL */
+.cam-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:2000;align-items:flex-end;justify-content:center;backdrop-filter:blur(8px);}
+.cam-overlay.show{display:flex;animation:ov-in 0.2s ease;}
+@keyframes ov-in{from{opacity:0;}to{opacity:1;}}
+.cam-sheet{background:linear-gradient(180deg,#0c1f0e,#071409);border:1px solid var(--border);border-radius:24px 24px 0 0;padding:30px 24px 40px;width:100%;max-width:480px;animation:sheet-up 0.32s cubic-bezier(0.16,1,0.3,1) both;}
+@keyframes sheet-up{from{transform:translateY(100px);opacity:0;}to{transform:none;opacity:1;}}
+.cam-sheet h3{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--text);margin-bottom:5px;text-align:center;}
+.cam-sheet p{font-size:13px;color:var(--muted);text-align:center;margin-bottom:24px;}
+.cam-choices{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.cam-choice{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:16px;padding:22px 14px;text-align:center;cursor:pointer;transition:all 0.22s;font-family:'DM Sans',sans-serif;}
+.cam-choice:hover{background:rgba(74,222,128,0.1);border-color:var(--green);transform:translateY(-3px);box-shadow:0 8px 24px rgba(74,222,128,0.15);}
+.cam-choice .cc-icon{font-size:36px;display:block;margin-bottom:10px;}
+.cam-choice .cc-label{font-size:14px;font-weight:700;color:var(--text);}
+.cam-choice .cc-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+.cam-cancel{width:100%;padding:13px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:all 0.2s;}
+.cam-cancel:hover{border-color:var(--red);color:var(--red);}
+
+/* VOICE SELECTOR */
+.voice-bar{display:flex;align-items:center;gap:8px;padding:8px 0 0;font-size:11px;color:var(--muted);}
+.voice-bar select{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;outline:none;}
+.voice-bar select option{background:#0d2010;}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+
+<!-- CAMERA MODAL -->
+<div class="cam-overlay" id="camOverlay" onclick="overlayClick(event)">
+  <div class="cam-sheet">
+    <h3>📷 Add Crop Photo</h3>
+    <p id="camSheetDesc">Take a photo with your camera or pick one from your files</p>
+    <div class="cam-choices">
+      <div class="cam-choice" onclick="doCamera()">
+        <span class="cc-icon">📸</span>
+        <div class="cc-label" id="camLabel">Open Camera</div>
+        <div class="cc-sub" id="camSub">Capture right now</div>
+      </div>
+      <div class="cam-choice" onclick="doGallery()">
+        <span class="cc-icon">🖼️</span>
+        <div class="cc-label">Upload Image</div>
+        <div class="cc-sub">Pick from files</div>
+      </div>
+    </div>
+    <button class="cam-cancel" onclick="closeCam()">Cancel</button>
+  </div>
+</div>
+
+<!--
+  FIXED CAMERA INPUTS:
+  inp_camera: on mobile uses back camera (capture="environment")
+              on desktop opens normal file dialog (capture attr ignored gracefully)
+  inp_gallery: always opens file/gallery picker (no capture)
+-->
+<input type="file" id="inp_camera"  accept="image/*" style="display:none" onchange="handleImg(event)">
+<input type="file" id="inp_gallery" accept="image/*" style="display:none" onchange="handleImg(event)">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">🌿</div>
+    <div>
+      <h2>Farmer <span>Assisting Bot</span></h2>
+      <small>Smart Farming Platform</small>
+    </div>
+  </div>
+  <div class="sb-profile">
+    <div class="sb-avatar" id="sbAvatar">👨‍🌾</div>
+    <div class="sb-name" id="sbName">—</div>
+    <div class="sb-meta" id="sbMeta">Loading…</div>
+    <div class="sb-badge" id="sbBadge">🌾 Farmer</div>
+  </div>
+  <div class="sb-nav">
+    <div class="sb-section-lbl">Main</div>
+    <button class="nav-btn" onclick="switchTab('farmwealth',this)"><span class="nav-icon">💚</span> Farm Health</button>
+    <button class="nav-btn active" onclick="switchTab('chat',this)"><span class="nav-icon">💬</span> AI Assistant</button>
+    <button class="nav-btn" onclick="switchTab('dashboard',this)"><span class="nav-icon">📊</span> Farm Dashboard</button>
+    <button class="nav-btn" onclick="switchTab('schemes',this)"><span class="nav-icon">🏛️</span> Govt Schemes</button>
+    <button class="nav-btn" onclick="switchTab('weather',this)"><span class="nav-icon">🌤️</span> Weather Forecast</button>
+    <div class="sb-section-lbl">Quick Ask</div>
+    <button class="nav-btn" onclick="quickAsk('What pest might cause white holes in my crop?')"><span class="nav-icon">🐛</span> Pest Diagnosis</button>
+    <button class="nav-btn" onclick="quickAsk('What is the best fertilizer for my soil and crop?')"><span class="nav-icon">🧪</span> Fertilizer Guide</button>
+    <button class="nav-btn" onclick="quickAsk('What government schemes am I eligible for?')"><span class="nav-icon">📋</span> My Schemes</button>
+    <button class="nav-btn" onclick="quickAsk('What is current market price for my crop?')"><span class="nav-icon">💰</span> Market Price</button>
+  </div>
+  <div class="sb-weather">
+    <div class="sw-title">☁ Weather Now</div>
+    <div class="sw-temp" id="sbWTemp">—°C</div>
+    <div class="sw-desc" id="sbWDesc">Fetching…</div>
+  </div>
+  <div class="sb-footer">
+    <button class="logout-btn" onclick="logout()">↩ Change Profile</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="status-dot"></div>
+      <div class="tb-status">Farmer Assisting Bot Online</div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-tabs">
+        <button class="tb-tab active" id="tab-chat" onclick="switchTab('chat',null)">💬 Chat</button>
+        <button class="tb-tab" id="tab-farmwealth" onclick="switchTab('farmwealth',null)">💚 Farm Health</button>
+        <button class="tb-tab" id="tab-dashboard" onclick="switchTab('dashboard',null)">📊 Dashboard</button>
+        <button class="tb-tab" id="tab-schemes" onclick="switchTab('schemes',null)">🏛️ Schemes</button>
+        <button class="tb-tab" id="tab-weather" onclick="switchTab('weather',null)">🌤️ Weather</button>
+      </div>
+      <div class="lang-switch" title="Change language">
+        <span>🌐</span>
+        <div id="google_translate_element"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT PANEL -->
+  <div class="panel active" id="panel-chat">
+    <div class="chatbox" id="chatbox">
+      <div class="welcome" id="welcome">
+
+        <!-- JARVIS ORB replaces waving hand -->
+        <div class="jarvis-orb-wrap">
+          <div class="jarvis-orb" title="Click to hear a greeting" onclick="speakGreeting()">
+            <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+              <!-- outer decorative ring with dashes -->
+              <circle class="orb-ring" cx="36" cy="36" r="34" stroke-dasharray="4 3"/>
+              <!-- mid ring -->
+              <circle class="orb-ring-2" cx="36" cy="36" r="28" stroke-dasharray="2 4"/>
+              <!-- core glow circle -->
+              <circle cx="36" cy="36" r="22" fill="rgba(74,222,128,0.07)" stroke="rgba(74,222,128,0.4)" stroke-width="1.5"/>
+              <!-- pulsing inner glow -->
+              <circle class="orb-glow" cx="36" cy="36" r="18" fill="rgba(74,222,128,0.12)" stroke="none"/>
+              <!-- cross-hair lines -->
+              <line x1="36" y1="10" x2="36" y2="18" stroke="rgba(74,222,128,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="36" y1="54" x2="36" y2="62" stroke="rgba(74,222,128,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="10" y1="36" x2="18" y2="36" stroke="rgba(74,222,128,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="54" y1="36" x2="62" y2="36" stroke="rgba(74,222,128,0.5)" stroke-width="1.5" stroke-linecap="round"/>
+              <!-- diagonal ticks -->
+              <line x1="18" y1="18" x2="22" y2="22" stroke="rgba(74,222,128,0.3)" stroke-width="1" stroke-linecap="round"/>
+              <line x1="50" y1="18" x2="54" y2="14" stroke="rgba(74,222,128,0.3)" stroke-width="1" stroke-linecap="round"/>
+              <line x1="18" y1="54" x2="22" y2="50" stroke="rgba(74,222,128,0.3)" stroke-width="1" stroke-linecap="round"/>
+              <line x1="54" y1="54" x2="50" y2="50" stroke="rgba(74,222,128,0.3)" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+            <div class="orb-scan"></div>
+            <div class="orb-scan-2"></div>
+            <span class="orb-center-icon">🌿</span>
+          </div>
+        </div>
+
+        <h2>Vanakkam, <span id="welcomeName">Farmer</span>!</h2>
+        <p>Ask me anything about your farm — crops, soil, pests, schemes, weather, or prices. I speak your language!</p>
+        <div class="chips">
+          <div class="chip" onclick="quickAsk('My crop has white holes, what is the reason?')">🐛 White holes on crop</div>
+          <div class="chip" onclick="quickAsk('What fertilizer should I use for my crop?')">🧪 Fertilizer advice</div>
+          <div class="chip" onclick="quickAsk('How to apply for PM-KISAN online?')">📋 PM-KISAN help</div>
+          <div class="chip" onclick="quickAsk('What is the weather forecast for this week?')">🌦️ Weather forecast</div>
+          <div class="chip" onclick="quickAsk('What is the market price of my crop today?')">💰 Market price</div>
+          <div class="chip" onclick="quickAsk('How to improve soil fertility naturally?')">🌱 Soil tips</div>
+        </div>
+      </div>
+    </div>
+    <div class="bot-notify-stack" id="botNotifyStack"></div>
+
+    <div class="img-preview" id="imgPreview">
+      <img id="previewThumb" src="" alt="">
+      <span id="previewName">image.jpg</span>
+      <button onclick="clearImg()">✕</button>
+    </div>
+
+    <div class="tts-bar" id="ttsBar">
+      <div class="tts-wave"><span></span><span></span><span></span><span></span><span></span></div>
+      <span id="ttsLabel">J.A.R.V.I.S. speaking…</span>
+      <button style="margin-left:auto;background:transparent;border:none;color:var(--red);cursor:pointer;font-size:16px;" onclick="stopSpeech()">■ Stop</button>
+    </div>
+
+    <div class="input-area">
+      <div class="voice-bar">
+        <span>🤖 Voice:</span>
+        <select id="voiceSelect" onchange="saveVoicePref()">
+          <option value="jarvis">J.A.R.V.I.S. (Best British)</option>
+          <option value="google-uk">Google UK English</option>
+          <option value="google-in">Google India English</option>
+          <option value="native">Native Language</option>
+        </select>
+        <span id="voiceStatus" style="color:var(--green);font-size:10px;"></span>
+      </div>
+      <div class="input-row">
+        <div class="input-wrap">
+          <textarea id="msgInput" rows="1" placeholder="Type or speak your question…" onkeydown="handleKey(event)"></textarea>
+          <button class="iact" id="micBtn" title="Voice input" onclick="toggleMic()">🎤</button>
+          <button class="iact" title="Crop photo" onclick="showCam()">📷</button>
+        </div>
+        <button class="undo-chat-btn" id="undoChatBtn" type="button" onclick="undoLastChatTurn()" disabled>Undo</button>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FARM WEALTH -->
+  <div class="panel" id="panel-farmwealth">
+    <div class="dash-grid" id="farmWealthGrid" style="display:block;max-width:760px;margin:0 auto;"></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="panel" id="panel-dashboard">
+  <div class="dash-grid" id="dashGrid"></div>
+
+  <!-- ================= NEW AI SYSTEM ================= -->
+  <div style="width:100%; padding:20px; display:flex; flex-direction:column; gap:16px;">
+
+    <!-- ALERTS -->
+    <div class="d-card red-glow">
+      <div class="d-label">🚨 Smart Alerts</div>
+      <div id="alertsBox"></div>
+    </div>
+
+    <!-- AI ANALYSIS -->
+    <div class="d-card green-glow">
+      <div class="d-label">🧠 Farm Health Analysis</div>
+      <div id="analysisBox"></div>
+    </div>
+
+    <!-- WEATHER -->
+    <div class="d-card sky-glow">
+      <div class="d-label">🌦 Weather Prediction</div>
+      <div id="weatherBox"></div>
+    </div>
+
+  </div>
+</div>
+
+  <!-- SCHEMES -->
+  <div class="panel" id="panel-schemes">
+    <div class="dash-grid" id="schemesGrid" style="display:block;max-width:700px;margin:0 auto;"></div>
+  </div>
+
+  <!-- WEATHER -->
+  <div class="panel" id="panel-weather">
+    <div class="dash-grid" id="weatherGrid"></div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════
+   PROFILE LOAD
+════════════════════════════════════ */
+const profile = JSON.parse(localStorage.getItem('farmerProfile')||'null');
+if(!profile) window.location.href='registration.html';
+const LANG_ALIASES = {
+  en: 'en-IN', 'en-in': 'en-IN', english: 'en-IN',
+  hi: 'hi-IN', 'hi-in': 'hi-IN', hindi: 'hi-IN',
+  ta: 'ta-IN', 'ta-in': 'ta-IN', tamil: 'ta-IN',
+  te: 'te-IN', 'te-in': 'te-IN', telugu: 'te-IN',
+  kn: 'kn-IN', 'kn-in': 'kn-IN', kannada: 'kn-IN',
+  ml: 'ml-IN', 'ml-in': 'ml-IN', malayalam: 'ml-IN',
+  mr: 'mr-IN', 'mr-in': 'mr-IN', marathi: 'mr-IN',
+  gu: 'gu-IN', 'gu-in': 'gu-IN', gujarati: 'gu-IN',
+  pa: 'pa-IN', 'pa-in': 'pa-IN', punjabi: 'pa-IN',
+  bn: 'bn-IN', 'bn-in': 'bn-IN', bengali: 'bn-IN',
+  or: 'or-IN', 'or-in': 'or-IN', odia: 'or-IN',
+  ur: 'ur-PK', 'ur-pk': 'ur-PK', urdu: 'ur-PK'
+};
+const LANG_DEFAULT_REGIONS = {
+  en:'IN', hi:'IN', ta:'IN', te:'IN', kn:'IN', ml:'IN', gu:'IN', mr:'IN', bn:'IN', pa:'IN', or:'IN', ur:'PK',
+  de:'DE', fr:'FR', es:'ES', it:'IT', pt:'PT', ru:'RU', zh:'CN', ja:'JP', ko:'KR',
+  ar:'SA', tr:'TR', nl:'NL', pl:'PL', sv:'SE', no:'NO', da:'DK', fi:'FI', cs:'CZ', el:'GR',
+  he:'IL', th:'TH', vi:'VN', id:'ID', ms:'MY', uk:'UA', ro:'RO', hu:'HU'
+};
+const LANG_LABELS = {
+  'en-IN':'English','hi-IN':'Hindi','ta-IN':'Tamil','te-IN':'Telugu',
+  'kn-IN':'Kannada','ml-IN':'Malayalam','mr-IN':'Marathi','gu-IN':'Gujarati',
+  'pa-IN':'Punjabi','bn-IN':'Bengali','or-IN':'Odia','ur-PK':'Urdu',
+  'de-DE':'German','fr-FR':'French','es-ES':'Spanish','it-IT':'Italian','pt-PT':'Portuguese',
+  'ru-RU':'Russian','zh-CN':'Chinese','ja-JP':'Japanese','ko-KR':'Korean','ar-SA':'Arabic',
+  'tr-TR':'Turkish','nl-NL':'Dutch','pl-PL':'Polish','sv-SE':'Swedish','no-NO':'Norwegian',
+  'da-DK':'Danish','fi-FI':'Finnish','cs-CZ':'Czech','el-GR':'Greek','he-IL':'Hebrew',
+  'th-TH':'Thai','vi-VN':'Vietnamese','id-ID':'Indonesian','ms-MY':'Malay','uk-UA':'Ukrainian',
+  'ro-RO':'Romanian','hu-HU':'Hungarian'
+};
+function normalizeLang(code){
+  const raw = String(code || '').trim().toLowerCase();
+  if(LANG_ALIASES[raw]) return LANG_ALIASES[raw];
+  if(/^[a-z]{2}$/.test(raw)){
+    const region = LANG_DEFAULT_REGIONS[raw] || raw.toUpperCase();
+    return `${raw}-${region}`;
+  }
+  if(/^[a-z]{2}-[a-z]{2}$/.test(raw)){
+    const [lang, region] = raw.split('-');
+    return `${lang}-${region.toUpperCase()}`;
+  }
+  return 'en-IN';
+}
+function getGoogleTranslateLang(){
+  const combo = document.querySelector('#google_translate_element .goog-te-combo');
+  if(combo?.value && combo.value !== 'auto'){
+    return combo.value.trim().toLowerCase();
+  }
+  const match = document.cookie.match(/(?:^|;\s*)googtrans=([^;]+)/);
+  if(!match) return null;
+  const cookieVal = decodeURIComponent(match[1] || '');
+  const parts = cookieVal.split('/');
+  const toLang = parts[parts.length - 1];
+  if(!toLang || toLang === 'auto') return null;
+  return toLang.trim().toLowerCase();
+}
+function getActiveLang(){
+  const translated = getGoogleTranslateLang();
+  return translated ? normalizeLang(translated) : normalizeLang(profile.lang);
+}
+profile.lang = normalizeLang(profile.lang);
+document.getElementById('welcomeName').textContent = profile.name;
+document.getElementById('sbName').textContent = profile.name;
+document.getElementById('sbMeta').innerHTML = `📍 ${profile.village||'—'}, ${profile.state||'—'}<br>🌾 ${profile.crop||'—'} · ${profile.acres||'—'} acres`;
+document.getElementById('sbBadge').textContent = profile.kcc==='Yes'?'✅ KCC Holder':'🌾 Farmer';
+const savedPhoto = localStorage.getItem('farmerPhoto');
+if(savedPhoto){ document.getElementById('sbAvatar').innerHTML=`<img src="${savedPhoto}" alt="">`; }
+
+/* ════════════════════════════════════
+   DEVICE DETECTION — is this a desktop/laptop?
+════════════════════════════════════ */
+function isMobileDevice(){
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)); // iPad Pro
+}
+
+/* ════════════════════════════════════
+   TABS
+════════════════════════════════════ */
+function switchTab(tab,navEl){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tb-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab)?.classList.add('active');
+  if(navEl)navEl.classList.add('active');
+  if(tab==='farmwealth')buildFarmWealth();
+  if(tab==='dashboard')buildDash();
+  if(tab==='schemes')buildSchemes();
+  if(tab==='weather')buildWeather();
+}
+
+/* ════════════════════════════════════
+   CAMERA MODAL — FIXED FOR DESKTOP + MOBILE
+════════════════════════════════════ */
+function showCam(){
+  const mobile = isMobileDevice();
+  // Update modal text based on device
+  document.getElementById('camLabel').textContent = mobile ? 'Open Camera' : 'Open Webcam';
+  document.getElementById('camSub').textContent = mobile ? 'Capture right now' : 'Use your laptop camera';
+  document.getElementById('camSheetDesc').textContent = mobile
+    ? 'Take a live photo or pick from gallery'
+    : 'Use your webcam or choose an image file';
+  document.getElementById('camOverlay').classList.add('show');
+}
+function closeCam(){ document.getElementById('camOverlay').classList.remove('show'); }
+function overlayClick(e){ if(e.target.id==='camOverlay') closeCam(); }
+
+function doCamera(){
+  closeCam();
+  if(isMobileDevice()){
+    // Mobile: use capture="environment" to open rear camera directly
+    const inp = document.getElementById('inp_camera');
+    inp.setAttribute('capture','environment');
+    inp.value='';
+    inp.click();
+  } else {
+    // Desktop/Laptop: open inline webcam capture UI
+    openWebcamUI();
+  }
+}
+
+function doGallery(){
+  closeCam();
+  // Always opens file picker — no capture attribute = gallery/files
+  const inp = document.getElementById('inp_gallery');
+  inp.removeAttribute('capture');
+  inp.value='';
+  inp.click();
+}
+
+/* ════════════════════════════════════
+   DESKTOP WEBCAM CAPTURE
+   Opens a modal with live video stream + snap button
+════════════════════════════════════ */
+let webcamStream = null;
+
+function openWebcamUI(){
+  // Create webcam modal dynamically
+  let wm = document.getElementById('webcamModal');
+  if(!wm){
+    wm = document.createElement('div');
+    wm.id = 'webcamModal';
+    wm.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:3000;
+      display:flex;align-items:center;justify-content:center;
+      backdrop-filter:blur(10px);animation:ov-in 0.2s ease;
+    `;
+    wm.innerHTML = `
+      <div style="background:linear-gradient(180deg,#0c1f0e,#071409);border:1px solid rgba(74,222,128,0.2);
+        border-radius:20px;padding:24px;max-width:500px;width:90%;text-align:center;">
+        <h3 style="font-family:'Playfair Display',serif;font-size:18px;color:#f0fdf4;margin-bottom:6px;">📸 Webcam Capture</h3>
+        <p style="font-size:12px;color:#86efac;margin-bottom:16px;">Point your camera at the crop and click capture</p>
+        <video id="webcamVideo" autoplay playsinline muted
+          style="width:100%;border-radius:12px;border:1px solid rgba(74,222,128,0.2);background:#000;max-height:300px;object-fit:cover;display:block;">
+        </video>
+        <canvas id="webcamCanvas" style="display:none;"></canvas>
+        <div style="margin-top:14px;display:flex;gap:10px;justify-content:center;">
+          <button onclick="snapWebcam()" style="
+            padding:11px 28px;background:linear-gradient(135deg,#4ade80,#16a34a);
+            border:none;border-radius:10px;color:#000;font-weight:700;font-size:14px;
+            cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;"
+            onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
+            📸 Capture Photo
+          </button>
+          <button onclick="closeWebcam()" style="
+            padding:11px 20px;background:transparent;
+            border:1px solid rgba(74,222,128,0.2);border-radius:10px;
+            color:#86efac;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+            Cancel
+          </button>
+        </div>
+        <p id="webcamErr" style="color:#f87171;font-size:12px;margin-top:10px;display:none;"></p>
+      </div>
+    `;
+    document.body.appendChild(wm);
+  }
+  wm.style.display = 'flex';
+
+  // Start video stream
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width:{ideal:1280}, height:{ideal:720} }, audio: false })
+    .then(stream => {
+      webcamStream = stream;
+      const vid = document.getElementById('webcamVideo');
+      vid.srcObject = stream;
+    })
+    .catch(err => {
+      const errEl = document.getElementById('webcamErr');
+      errEl.style.display = 'block';
+      if(err.name === 'NotAllowedError'){
+        errEl.textContent = '⚠️ Camera permission denied. Please allow camera access in your browser settings.';
+      } else if(err.name === 'NotFoundError'){
+        errEl.textContent = '⚠️ No camera found on this device.';
+      } else {
+        errEl.textContent = `⚠️ Camera error: ${err.message}`;
+      }
+    });
+}
+
+function snapWebcam(){
+  const vid = document.getElementById('webcamVideo');
+  const canvas = document.getElementById('webcamCanvas');
+  canvas.width = vid.videoWidth || 640;
+  canvas.height = vid.videoHeight || 480;
+  canvas.getContext('2d').drawImage(vid, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  // Use as image
+  imgFile = {name:'webcam-capture.jpg'};
+  imgB64 = dataUrl;
+  document.getElementById('previewThumb').src = dataUrl;
+  document.getElementById('previewName').textContent = 'webcam-capture.jpg';
+  document.getElementById('imgPreview').classList.add('show');
+  closeWebcam();
+}
+
+function closeWebcam(){
+  if(webcamStream){ webcamStream.getTracks().forEach(t=>t.stop()); webcamStream=null; }
+  const wm = document.getElementById('webcamModal');
+  if(wm) wm.style.display = 'none';
+}
+
+/* ════════════════════════════════════
+   IMAGE HANDLER
+════════════════════════════════════ */
+let imgFile=null, imgB64=null;
+function handleImg(e){
+  const file=e.target.files[0]; if(!file)return;
+  imgFile=file;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    imgB64=ev.target.result;
+    document.getElementById('previewThumb').src=imgB64;
+    document.getElementById('previewName').textContent=file.name;
+    document.getElementById('imgPreview').classList.add('show');
+  };
+  rd.readAsDataURL(file);
+}
+function clearImg(){
+  imgFile=null; imgB64=null;
+  document.getElementById('imgPreview').classList.remove('show');
+  document.getElementById('previewThumb').src='';
+  // Reset file inputs so same file can be re-picked
+  document.getElementById('inp_camera').value='';
+  document.getElementById('inp_gallery').value='';
+}
+
+/* ════════════════════════════════════
+   CHAT
+════════════════════════════════════ */
+const chatbox=document.getElementById('chatbox');
+const botNotifyStack=document.getElementById('botNotifyStack');
+const undoChatBtn=document.getElementById('undoChatBtn');
+let loading=false;
+let chatHistory=[];
+let dismissedBotNotifications=new Set(JSON.parse(sessionStorage.getItem('dismissedBotNotifications')||'[]'));
+
+function rememberDismissedNotifications(){
+  sessionStorage.setItem('dismissedBotNotifications', JSON.stringify([...dismissedBotNotifications]));
+}
+
+function escapeHtml(txt){
+  return String(txt ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function trimChatHistory(maxEntries=16){
+  if(chatHistory.length>maxEntries){
+    chatHistory=chatHistory.slice(chatHistory.length-maxEntries);
+  }
+}
+
+function updateUndoChatBtn(){
+  if(undoChatBtn) undoChatBtn.disabled=chatHistory.length===0||loading;
+}
+
+function formatBubbleText(txt){
+  return escapeHtml(txt)
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+}
+
+function renderChatHistory(){
+  chatbox.querySelectorAll('.msg-row').forEach(node=>node.remove());
+  chatHistory.forEach(entry=>{
+    const imgSrc=Array.isArray(entry.content)
+      ? (entry.content.find(part=>part?.type==='image_url')?.image_url?.url || null)
+      : null;
+    const txt=Array.isArray(entry.content)
+      ? (entry.content.find(part=>part?.type==='text')?.text || '')
+      : String(entry.content || '');
+    addBubble(txt,entry.role==='assistant'?'ai':'user',imgSrc);
+  });
+  updateUndoChatBtn();
+}
+
+function makeUserHistoryEntry(txt,imgSrc){
+  if(imgSrc){
+    return {
+      role:'user',
+      content:[
+        {type:'text',text:txt||'Analyze this crop image and tell me what issues you see.'},
+        {type:'image_url',image_url:{url:imgSrc}}
+      ]
+    };
+  }
+  return {role:'user',content:txt||'Help me with my farm.'};
+}
+
+function dismissBotNotification(id){
+  dismissedBotNotifications.add(id);
+  rememberDismissedNotifications();
+  document.querySelector(`[data-bot-notification="${id}"]`)?.remove();
+}
+
+async function undoBotNotification(id){
+  try{
+    const res=await fetch(`/notifications/${encodeURIComponent(id)}/undo`,{method:'POST'});
+    if(!res.ok)throw new Error('Undo failed');
+    dismissBotNotification(id);
+    loadAlerts();
+  }catch(e){
+    console.log('Undo notification error:',e);
+  }
+}
+
+function renderBotNotificationPopups(items){
+  if(!botNotifyStack)return;
+  const botItems=(items||[])
+    .filter(item=>item?.kind==='sensor-suggestion'&&item?.id&&!dismissedBotNotifications.has(item.id))
+    .slice(-2)
+    .reverse();
+
+  botNotifyStack.innerHTML='';
+
+  botItems.forEach(item=>{
+    const card=document.createElement('div');
+    card.className='bot-notify';
+    card.dataset.botNotification=item.id;
+    const detailText=item.details?escapeHtml(item.details):'';
+    card.innerHTML=`
+      <div class="bot-notify-head">
+        <div class="bot-notify-tag">1 Minute Suggestion</div>
+        <div class="bot-notify-time">${new Date(item.time).toLocaleTimeString()}</div>
+      </div>
+      <div class="bot-notify-msg">${escapeHtml(item.msg)}</div>
+      ${detailText?`<div class="bot-notify-details">${detailText}</div>`:''}
+      <div class="bot-notify-actions">
+        <button class="bot-notify-btn keep" type="button" data-keep-id="${item.id}">Keep</button>
+        <button class="bot-notify-btn undo" type="button" data-undo-id="${item.id}">Undo</button>
+      </div>
+    `;
+    botNotifyStack.appendChild(card);
+  });
+
+  botNotifyStack.querySelectorAll('[data-keep-id]').forEach(btn=>{
+    btn.onclick=()=>dismissBotNotification(btn.dataset.keepId);
+  });
+  botNotifyStack.querySelectorAll('[data-undo-id]').forEach(btn=>{
+    btn.onclick=()=>undoBotNotification(btn.dataset.undoId);
+  });
+}
+
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function quickAsk(txt){switchTab('chat',null);document.getElementById('msgInput').value=txt;sendMessage();}
+function removeWelcome(){const w=document.getElementById('welcome');if(w)w.remove();}
+
+async function sendMessage(){
+  if(loading)return;
+  const inp=document.getElementById('msgInput');
+  const txt=inp.value.trim();
+  if(!txt&&!imgFile)return;
+  removeWelcome();
+  const sentTxt=txt||'Analyze this crop image and tell me what issues you see.';
+  const sentImg=imgB64;
+  const userEntry=makeUserHistoryEntry(sentTxt,sentImg);
+  chatHistory.push(userEntry);
+  trimChatHistory();
+  addBubble(txt||'📷 Image uploaded for analysis','user',sentImg);
+  updateUndoChatBtn();
+  inp.value=''; clearImg();
+  loading=true; document.getElementById('sendBtn').disabled=true; updateUndoChatBtn();
+  const tid=addTyping();
+  try{
+    const activeLang = getActiveLang();
+    const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:sentTxt,imageBase64:sentImg,history:chatHistory,farmerContext:buildCtx(),languageCode:activeLang})});
+    const d=await r.json();
+    removeEl(tid);
+    const reply = d.reply || d.error || (r.ok ? 'Sorry, no response.' : `Chat failed (${r.status})`);
+    if(r.ok&&d.reply){
+      chatHistory.push({role:'assistant',content:reply});
+      trimChatHistory();
+      updateUndoChatBtn();
+    }else{
+      chatHistory.pop();
+      updateUndoChatBtn();
+    }
+    addBubble(reply,'ai');
+    speak(reply);
+  }catch(er){
+    removeEl(tid);
+    chatHistory.pop();
+    addBubble('⚠️ Cannot connect to server. Make sure it is running on port 3000.','ai');
+  }
+  loading=false; document.getElementById('sendBtn').disabled=false; updateUndoChatBtn();
+}
+
+function buildCtx(){
+  return `Farmer: ${profile.name}, State: ${profile.state}, Village: ${profile.village}, Crop: ${profile.crop}, Soil: ${profile.soil}, Land: ${profile.acres} acres, Irrigation: ${profile.irrigation}, KCC: ${profile.kcc}, PM-KISAN: ${profile.pmkisan}, PMFBY: ${profile.pmfby}, Language: ${getActiveLang()}`;
+}
+
+function addBubble(txt,type,imgSrc){
+  const row=document.createElement('div'); row.className='msg-row '+type;
+  const img=imgSrc?`<img src="${imgSrc}" alt="crop">`:'';
+  const formatted = formatBubbleText(txt);
+  row.innerHTML=`<div class="av ${type}">${type==='ai'?'🌿':'👤'}</div><div class="bubble ${type}">${formatted}${img}</div>`;
+  chatbox.appendChild(row); chatbox.scrollTop=chatbox.scrollHeight;
+}
+
+function undoLastChatTurn(){
+  if(loading||chatHistory.length===0)return;
+  while(chatHistory.length&&chatHistory[chatHistory.length-1].role==='assistant'){
+    chatHistory.pop();
+  }
+  while(chatHistory.length&&chatHistory[chatHistory.length-1].role==='user'){
+    chatHistory.pop();
+    break;
+  }
+  renderChatHistory();
+}
+
+function addTyping(){
+  const id='typ-'+Date.now(); const row=document.createElement('div');
+  row.className='msg-row ai'; row.id=id;
+  row.innerHTML=`<div class="av ai">🌿</div><div class="bubble ai"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  chatbox.appendChild(row); chatbox.scrollTop=chatbox.scrollHeight; return id;
+}
+function removeEl(id){document.getElementById(id)?.remove();}
+
+/* ════════════════════════════════════
+   MIC / SPEECH RECOGNITION
+════════════════════════════════════ */
+let recognition=null, isRecording=false;
+let micBaseText='';
+let micFinalText='';
+let micInterimText='';
+let micLangCandidates=[];
+let micLangIndex=0;
+let micCurrentLang='en-IN';
+let micRetryCount=0;
+let micRestartTimer=null;
+let micManualStop=false;
+let micUsingServerStt=false;
+let micFallbackRecorder=null;
+let micFallbackStream=null;
+let micFallbackChunks=[];
+
+function updateMicUi(active){
+  const btn=document.getElementById('micBtn');
+  btn.classList.toggle('recording',active);
+  btn.textContent=active?'🔴':'🎤';
+  btn.title=active?'Stop voice input':'Voice input';
+}
+
+function getSpeechRecognitionLang(){
+  const candidates=[
+    getActiveLang(),
+    navigator.language,
+    ...(navigator.languages||[]),
+    'en-IN',
+    'en-US'
+  ].filter(Boolean);
+
+  const resolved=[];
+  for(const code of candidates){
+    const normalized=normalizeLang(code);
+    if(LANG_LABELS[normalized]) resolved.push(normalized);
+    const base=normalized.split('-')[0];
+    const sibling=Object.keys(LANG_LABELS).find(key=>key.startsWith(`${base}-`));
+    if(sibling) resolved.push(sibling);
+  }
+
+  const unique=[...new Set(resolved.filter(Boolean))];
+  return unique[0] || 'en-IN';
+}
+
+function getSpeechRecognitionLangCandidates(){
+  const primary=getSpeechRecognitionLang();
+  const fallback=['en-IN','en-US'];
+  return [...new Set([primary,...fallback])];
+}
+
+function applySpeechText(){
+  const input=document.getElementById('msgInput');
+  const combined=[micBaseText, micFinalText.trim(), micInterimText.trim()]
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g,' ')
+    .trim();
+  input.value=combined;
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+}
+
+function stopMicRecognition(){
+  micManualStop=true;
+  if(micRestartTimer){
+    clearTimeout(micRestartTimer);
+    micRestartTimer=null;
+  }
+  micUsingServerStt=false;
+  isRecording=false;
+  updateMicUi(false);
+  try{recognition?.stop();}catch(e){}
+}
+
+function fileToDataUrl(fileOrBlob){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(new Error('Failed to read audio blob'));
+    reader.readAsDataURL(fileOrBlob);
+  });
+}
+
+async function transcribeServerAudio(blob){
+  const dataUrl=await fileToDataUrl(blob);
+  const resp=await fetch('/stt',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      audioBase64:dataUrl,
+      mimeType:blob.type || 'audio/webm',
+      languageCode:getActiveLang()
+    })
+  });
+  const data=await resp.json();
+  if(!resp.ok){
+    throw new Error(data.error || `STT failed (${resp.status})`);
+  }
+  return String(data.transcript || '').trim();
+}
+
+function stopServerMicCapture(){
+  try{
+    if(micFallbackRecorder && micFallbackRecorder.state!=='inactive'){
+      micFallbackRecorder.stop();
+    }
+  }catch(e){}
+  if(micFallbackStream){
+    micFallbackStream.getTracks().forEach(track=>track.stop());
+    micFallbackStream=null;
+  }
+}
+
+async function startServerMicCapture(){
+  const input=document.getElementById('msgInput');
+  stopSpeech();
+  micManualStop=false;
+  micUsingServerStt=true;
+  micBaseText=input.value.trim();
+  micFinalText='';
+  micInterimText='';
+  micFallbackChunks=[];
+
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({
+      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
+    });
+    micFallbackStream=stream;
+
+    let mimeType='';
+    const supported=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
+    for(const m of supported){
+      if(window.MediaRecorder?.isTypeSupported?.(m)){ mimeType=m; break; }
+    }
+    micFallbackRecorder=mimeType ? new MediaRecorder(stream,{mimeType}) : new MediaRecorder(stream);
+
+    micFallbackRecorder.ondataavailable=(evt)=>{
+      if(evt.data && evt.data.size>0) micFallbackChunks.push(evt.data);
+    };
+
+    micFallbackRecorder.onerror=(evt)=>{
+      console.log('Server STT recorder error:',evt?.error || evt);
+      isRecording=false;
+      micUsingServerStt=false;
+      updateMicUi(false);
+      stopServerMicCapture();
+      alert('Could not capture microphone audio.');
+    };
+
+    micFallbackRecorder.onstop=async()=>{
+      const currentRecorder=micFallbackRecorder;
+      const chunks=micFallbackChunks.slice();
+      micFallbackChunks=[];
+      micFallbackRecorder=null;
+      stopServerMicCapture();
+      isRecording=false;
+      micUsingServerStt=false;
+      updateMicUi(false);
+
+      if(!chunks.length){
+        return;
+      }
+
+      try{
+        const blob=new Blob(chunks,{type:currentRecorder?.mimeType || 'audio/webm'});
+        const transcript=await transcribeServerAudio(blob);
+        if(!transcript){
+          alert('No speech detected. Please speak and try again.');
+          return;
+        }
+        micFinalText=transcript;
+        micInterimText='';
+        applySpeechText();
+      }catch(err){
+        console.log('Server STT error:',err);
+        alert(`Speech recognition error: ${err.message || 'server stt failed'}`);
+      }
+    };
+
+    micFallbackRecorder.start();
+    isRecording=true;
+    updateMicUi(true);
+  }catch(err){
+    micUsingServerStt=false;
+    isRecording=false;
+    updateMicUi(false);
+    alert('Microphone access failed. Please allow mic permission in browser settings.');
+  }
+}
+
+function startMicRecognition(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const input=document.getElementById('msgInput');
+  input.focus();
+  recognition=new SR();
+  recognition.lang=micCurrentLang;
+  recognition.continuous=true;
+  recognition.interimResults=true;
+  recognition.maxAlternatives=1;
+
+  recognition.onstart=()=>{
+    isRecording=true;
+    updateMicUi(true);
+  };
+
+  recognition.onresult=e=>{
+    let interimText='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const part=e.results[i][0]?.transcript || '';
+      if(e.results[i].isFinal) micFinalText+=part+' ';
+      else interimText+=part+' ';
+    }
+    micInterimText=interimText;
+    applySpeechText();
+  };
+
+  recognition.onerror=(e)=>{
+    const err=e?.error || 'unknown';
+    const hasNextLang=micLangIndex < micLangCandidates.length - 1;
+
+    if((err==='network' || err==='language-not-supported') && hasNextLang){
+      micLangIndex += 1;
+      micCurrentLang = micLangCandidates[micLangIndex];
+      console.log(`Speech recognition fallback -> ${micCurrentLang} (${err})`);
+      if(micRestartTimer) clearTimeout(micRestartTimer);
+      micRestartTimer=setTimeout(()=>startMicRecognition(),500);
+      return;
+    }
+
+    if(err==='network' && micRetryCount < 2){
+      micRetryCount += 1;
+      console.log(`Speech recognition retry ${micRetryCount} due to network error`);
+      if(micRestartTimer) clearTimeout(micRestartTimer);
+      micRestartTimer=setTimeout(()=>startMicRecognition(),800);
+      return;
+    }
+
+    if(err==='network'){
+      console.log('SpeechRecognition network failed, switching to server STT fallback');
+      micManualStop=true;
+      isRecording=false;
+      if(micRestartTimer){
+        clearTimeout(micRestartTimer);
+        micRestartTimer=null;
+      }
+      updateMicUi(false);
+      try{recognition?.stop();}catch(e){}
+      setTimeout(()=>startServerMicCapture(),120);
+      return;
+    }
+
+    if(err==='not-allowed' || err==='service-not-allowed'){
+      alert('Microphone permission is blocked. Please allow mic access in your browser and try again.');
+    }else if(err==='language-not-supported'){
+      alert(`This browser does not support voice recognition for ${LANG_LABELS[micCurrentLang] || micCurrentLang}.`);
+    }else if(err==='aborted'){
+      // User stopped it manually.
+    }else if(err==='audio-capture'){
+      alert('No microphone audio was detected by the browser.');
+    }else if(err!=='no-speech'){
+      console.log('Speech recognition error:',err);
+      alert(`Speech recognition error: ${err}`);
+    }else{
+      console.log('Speech recognition error:',err);
+    }
+    isRecording=false;
+    updateMicUi(false);
+  };
+
+  recognition.onend=()=>{
+    if(isRecording && !micManualStop){
+      if(micRestartTimer) clearTimeout(micRestartTimer);
+      micRestartTimer=setTimeout(()=>startMicRecognition(),350);
+      return;
+    }
+    isRecording=false;
+    micInterimText='';
+    applySpeechText();
+    updateMicUi(false);
+  };
+
+  try{
+    recognition.start();
+  }catch(e){
+    isRecording=false;
+    updateMicUi(false);
+    alert('Could not start voice input. Try using Chrome and allow microphone access.');
+  }
+}
+
+function toggleMic(){
+  if(isRecording){
+    if(micUsingServerStt){
+      micManualStop=true;
+      stopServerMicCapture();
+    }else{
+      stopMicRecognition();
+    }
+    return;
+  }
+
+  const hasBrowserSpeech=('webkitSpeechRecognition'in window)||('SpeechRecognition'in window);
+  if(!hasBrowserSpeech){
+    startServerMicCapture();
+    return;
+  }
+
+  stopSpeech();
+  micUsingServerStt=false;
+  micManualStop=false;
+  micRetryCount=0;
+  micLangCandidates=getSpeechRecognitionLangCandidates();
+  micLangIndex=0;
+  micCurrentLang=micLangCandidates[0] || 'en-IN';
+  const input=document.getElementById('msgInput');
+  input.focus();
+  micBaseText=input.value.trim();
+  micFinalText='';
+  micInterimText='';
+  startMicRecognition();
+}
+
+/* ════════════════════════════════════
+   J.A.R.V.I.S. TTS — VOICE SYSTEM
+   
+   HOW TO CHANGE VOICE:
+   The Web Speech API uses voices installed on your OS/browser.
+   Best JARVIS-like voices (deep, British/robotic):
+   
+   On Windows: "Microsoft George" or "Microsoft David" (Control Panel > Speech)
+   On Mac: "Daniel" (British), "Alex" — System Preferences > Accessibility > Speech
+   On Linux: install espeak or festival
+   In Chrome: Google UK English Male is best
+   
+   The dropdown in the UI lets users pick the voice style.
+   "jarvis" mode picks the best available deep/British voice automatically.
+════════════════════════════════════ */
+let availableVoices = [];
+let selectedVoice = null;
+
+function getDefaultVoicePref(){
+  return getActiveLang().startsWith('en') ? 'jarvis' : 'native';
+}
+
+function getVoicePref(){
+  return localStorage.getItem('voicePref') || getDefaultVoicePref();
+}
+
+function voiceMatchesLanguage(voice, langCode){
+  if(!voice || !langCode) return false;
+  const base = langCode.split('-')[0].toLowerCase();
+  return voice.lang?.toLowerCase() === langCode.toLowerCase()
+    || voice.lang?.toLowerCase().startsWith(base);
+}
+
+function detectTextLanguage(text){
+  if(!text) return null;
+  if(/[\u0B80-\u0BFF]/.test(text)) return 'ta-IN'; // Tamil
+  if(/[\u0900-\u097F]/.test(text)) return 'hi-IN'; // Devanagari (Hindi/Marathi)
+  if(/[\u0C00-\u0C7F]/.test(text)) return 'te-IN'; // Telugu
+  if(/[\u0C80-\u0CFF]/.test(text)) return 'kn-IN'; // Kannada
+  if(/[\u0D00-\u0D7F]/.test(text)) return 'ml-IN'; // Malayalam
+  if(/[\u0A80-\u0AFF]/.test(text)) return 'gu-IN'; // Gujarati
+  if(/[\u0A00-\u0A7F]/.test(text)) return 'pa-IN'; // Punjabi (Gurmukhi)
+  if(/[\u0980-\u09FF]/.test(text)) return 'bn-IN'; // Bengali
+  if(/[\u0B00-\u0B7F]/.test(text)) return 'or-IN'; // Odia
+  if(/[\u0600-\u06FF]/.test(text)) return 'ur-PK'; // Urdu
+  return null;
+}
+
+// Load voices (they load async in most browsers)
+function loadVoices(){
+  availableVoices = window.speechSynthesis.getVoices();
+  pickJarvisVoice();
+  updateVoiceStatus();
+}
+if(window.speechSynthesis){
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+}
+
+function pickJarvisVoice(){
+  selectedVoice = null;
+  const pref = getVoicePref();
+  const activeLang = getActiveLang();
+  document.getElementById('voiceSelect').value = pref;
+
+  if(pref === 'jarvis'){
+    // For non-English profiles, prefer native voice even in jarvis mode.
+    if(!activeLang.startsWith('en')){
+      selectedVoice = availableVoices.find(v=>voiceMatchesLanguage(v, activeLang)) || null;
+    }
+    // Priority order: best deep/British/robotic voices for JARVIS effect
+    const jarvisPriority = [
+      'Google UK English Male',
+      'Microsoft George - English (United Kingdom)',
+      'Microsoft David - English (United States)',
+      'Daniel',           // Mac British male
+      'Google UK English Female', // fallback UK
+      'Microsoft Zira',   // Windows fallback
+      'Alex',             // Mac fallback
+    ];
+    if(!selectedVoice){
+      for(const name of jarvisPriority){
+        const v = availableVoices.find(v=>v.name===name);
+        if(v){ selectedVoice=v; break; }
+      }
+    }
+    // If none found, pick any English male-sounding voice
+    if(!selectedVoice){
+      selectedVoice = availableVoices.find(v=>v.lang.startsWith('en') && v.name.toLowerCase().includes('male'))
+        || availableVoices.find(v=>v.lang.startsWith('en-GB'))
+        || availableVoices.find(v=>voiceMatchesLanguage(v, activeLang))
+        || availableVoices.find(v=>v.lang.startsWith('en'))
+        || null;
+    }
+  } else if(pref === 'google-uk'){
+    selectedVoice = availableVoices.find(v=>v.name==='Google UK English Male')
+      || availableVoices.find(v=>v.lang==='en-GB')
+      || null;
+  } else if(pref === 'google-in'){
+    selectedVoice = availableVoices.find(v=>v.name==='Google हिन्दी' || v.name.includes('India'))
+      || availableVoices.find(v=>v.lang==='en-IN')
+      || null;
+  } else if(pref === 'native'){
+    selectedVoice = availableVoices.find(v=>voiceMatchesLanguage(v, activeLang))
+      || availableVoices.find(v=>v.lang?.startsWith('en-IN'))
+      || null;
+  }
+}
+
+function updateVoiceStatus(){
+  const el = document.getElementById('voiceStatus');
+  if(selectedVoice){
+    el.textContent = `✓ ${selectedVoice.name.substring(0,22)}`;
+  } else {
+    el.textContent = availableVoices.length ? '⚠ Default voice' : '⚠ No voices loaded';
+  }
+}
+
+function saveVoicePref(){
+  localStorage.setItem('voicePref', document.getElementById('voiceSelect').value);
+  pickJarvisVoice();
+  updateVoiceStatus();
+  // Preview the voice
+  const previewText = getActiveLang().startsWith('en')
+    ? 'Voice updated. How can I assist you?'
+    : 'Language voice updated.';
+  speak(previewText);
+}
+
+function applyJarvisSettings(utterance, targetLang){
+  // JARVIS-style: slow, deep, precise
+  const pref = getVoicePref();
+  const langToUse = normalizeLang(targetLang || getActiveLang());
+  const forceNativeForText = !langToUse.startsWith('en');
+  const langVoice = availableVoices.find(v=>voiceMatchesLanguage(v, langToUse));
+  const voiceToUse =
+    (selectedVoice && voiceMatchesLanguage(selectedVoice, langToUse)) ? selectedVoice :
+    (pref === 'native' ? langVoice : (langVoice || selectedVoice));
+  if(voiceToUse) utterance.voice = voiceToUse;
+
+  if(forceNativeForText){
+    utterance.rate  = 0.9;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    utterance.lang = voiceToUse?.lang || langToUse || 'en-IN';
+  } else if(pref === 'jarvis'){
+    const useEnglishStyle = langToUse.startsWith('en');
+    utterance.rate  = useEnglishStyle ? 0.82 : 0.9;
+    utterance.pitch = useEnglishStyle ? 0.75 : 1.0;
+    utterance.volume = 1.0;
+    utterance.lang = voiceToUse?.lang || langToUse || 'en-IN';
+  } else if(pref === 'google-uk'){
+    utterance.rate  = 0.88;
+    utterance.pitch = 0.85;
+    utterance.lang  = 'en-GB';
+  } else if(pref === 'google-in'){
+    utterance.rate  = 0.9;
+    utterance.pitch = 1.0;
+    utterance.lang  = 'en-IN';
+  } else {
+    utterance.rate  = 0.9;
+    utterance.pitch = 1.0;
+    utterance.lang  = voiceToUse?.lang || langToUse || 'en-IN';
+  }
+}
+
+let azureAudio=null;
+async function speakWithAzure(text, langCode){
+  try{
+    const resp=await fetch('/azure-tts',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text,languageCode:langCode})
+    });
+    if(!resp.ok) return false;
+    const blob=await resp.blob();
+    if(!blob || !blob.size) return false;
+
+    const audioUrl=URL.createObjectURL(blob);
+    azureAudio = new Audio(audioUrl);
+    azureAudio.onplay = () => {
+      document.getElementById('ttsBar').classList.add('show');
+      document.getElementById('ttsLabel').textContent='Azure AI speaking…';
+    };
+    azureAudio.onended = azureAudio.onerror = () => {
+      document.getElementById('ttsBar').classList.remove('show');
+      URL.revokeObjectURL(audioUrl);
+      azureAudio = null;
+    };
+    await azureAudio.play();
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function speakWithBrowser(clean, detectedLang){
+  if(!window.speechSynthesis) return;
+  const u = new SpeechSynthesisUtterance(clean);
+  applyJarvisSettings(u, detectedLang);
+  u.onstart = () => {
+    document.getElementById('ttsBar').classList.add('show');
+    document.getElementById('ttsLabel').textContent =
+      getVoicePref()==='jarvis' ? 'J.A.R.V.I.S. speaking…' : 'AI speaking…';
+  };
+  u.onend = u.onerror = () => {
+    document.getElementById('ttsBar').classList.remove('show');
+  };
+  window.speechSynthesis.speak(u);
+}
+
+async function speak(txt){
+  stopSpeech();
+  const clean = txt
+    .replace(/\*\*(.*?)\*\*/g,'$1')
+    .replace(/<[^>]*>/g,'')
+    .replace(/[#*_`~]/g,'')
+    .trim()
+    .substring(0, 600);
+  if(!clean) return;
+
+  const detectedLang = detectTextLanguage(clean) || getActiveLang();
+  const ok = await speakWithAzure(clean, detectedLang);
+  if(!ok){
+    speakWithBrowser(clean, detectedLang);
+  }
+}
+
+function stopSpeech(){
+  window.speechSynthesis?.cancel();
+  if(azureAudio){
+    azureAudio.pause();
+    azureAudio.currentTime=0;
+    azureAudio=null;
+  }
+  document.getElementById('ttsBar').classList.remove('show');
+}
+
+function speakGreeting(){
+  const activeLang = getActiveLang();
+  const greetings = {
+    'hi-IN': `Namaste ${profile.name}. Main aapka Farmer Assisting Bot hoon. Aaj kheti mein main kaise madad kar sakta hoon?`,
+    'ta-IN': `Vanakkam ${profile.name}. Naan ungal Farmer Assisting Bot. Innaiku ungal vivasayathukku eppadi udhavi seyyalaam?`,
+    'te-IN': `Namaskaram ${profile.name}. Nenu mee Farmer Assisting Bot. Ee roju mee vyavasayaniki ela sahayam cheyagalanu?`,
+    'kn-IN': `Namaskara ${profile.name}. Naanu nimma Farmer Assisting Bot. Ivattu nimma krishige heghe sahaya madabahudu?`,
+    'ml-IN': `Namaskaram ${profile.name}. Njan ningalude Farmer Assisting Bot aanu. Innu ningalude krishikku engane sahayikkam?`,
+    'mr-IN': `Namaskar ${profile.name}. Mi tumcha Farmer Assisting Bot ahe. Aaj tumchya shetit mi kashi madat karu?`,
+    'gu-IN': `Namaste ${profile.name}. Hu tamaro Farmer Assisting Bot chhu. Aaje kheti ma hu kevi rite madad kari saku?`,
+    'pa-IN': `Sat Sri Akal ${profile.name}. Main tuhadda Farmer Assisting Bot haan. Ajj kheti vich main kiven madad kara?`,
+    'bn-IN': `Nomoskar ${profile.name}. Ami apnar Farmer Assisting Bot. Aaj chashe ami kivabe sahajjo korte pari?`,
+    'or-IN': `Namaskar ${profile.name}. Mu apanankara Farmer Assisting Bot. Aji chasa re mu kemiti sahajya karibi?`,
+    'ur-PK': `Assalamualaikum ${profile.name}. Main aap ka Farmer Assisting Bot hoon. Aaj kheti mein main kis tarah madad karun?`
+  };
+  const text = greetings[activeLang]
+    || `Good day, ${profile.name}. I am your Farmer Assisting Bot. I am fully operational and ready to assist with your farm. How may I help you today?`;
+  speak(text);
+}
+
+/* ════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════ */
+const langMap = LANG_LABELS;
+
+async function buildFarmWealth(){
+  const g = document.getElementById('farmWealthGrid');
+  if(!g) return;
+  g.style.padding = '20px';
+  g.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);">Loading latest farm wealth details…</div>`;
+
+  try{
+    const res = await fetch("/farm-wealth");
+    if(!res.ok){
+      const msg = await res.text();
+      throw new Error(msg || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const latest = data && data.average ? data : null;
+
+    if(!latest){
+      g.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted);">No log data yet. Connect hardware and wait for first 10-second average.</div>`;
+      return;
+    }
+
+    const a = latest.average || {};
+    g.innerHTML = `
+      <h2 style="font-family:'Playfair Display',serif;margin-bottom:8px;color:var(--green);">💚 Farm Health Details</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Latest entry from log.json</p>
+      <div class="d-card green-glow" style="margin-bottom:10px;">
+        <div class="d-label">⏰ ${latest.timestamp || 'Unknown time'}</div>
+        <div class="d-sub" style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;line-height:1.9;color:var(--text);font-size:13px;">
+          "temperature": ${a.temperature ?? '—'},<br>
+          "humidity": ${a.humidity ?? '—'},<br>
+          "soil": ${a.soil ?? '—'},<br>
+          "rain": ${a.rain ?? '—'}
+        </div>
+      </div>
+    `;
+  }catch(e){
+    g.innerHTML = `<div style="text-align:center;padding:30px;color:var(--red);">Could not load farm wealth details.<br><small style="color:var(--muted)">${String(e.message || e)}</small></div>`;
+  }
+}
+
+function buildDash(){
+  const g=document.getElementById('dashGrid'); if(g.dataset.built)return; g.dataset.built=1;
+  const activeLang = getActiveLang();
+  g.innerHTML=`
+    <div class="d-card green-glow" style="animation-delay:0.05s"><div class="d-icon">🌾</div><div class="d-label">Total Land</div><div class="d-value">${profile.acres||'—'} <span>acres</span></div><div class="d-sub">${profile.landtype||''} land</div></div>
+    <div class="d-card green-glow" style="animation-delay:0.1s"><div class="d-icon">🌱</div><div class="d-label">Primary Crop</div><div class="d-value" style="font-size:18px">${profile.crop||'—'}</div><div class="d-sub">${profile.soil||''} soil</div></div>
+    <div class="d-card sky-glow" style="animation-delay:0.15s"><div class="d-icon">💧</div><div class="d-label">Irrigation</div><div class="d-value" style="font-size:18px">${profile.irrigation||'—'}</div></div>
+    <div class="d-card" style="animation-delay:0.2s"><div class="d-icon">📍</div><div class="d-label">Location</div><div class="d-value" style="font-size:16px">${profile.village||'—'}</div><div class="d-sub">${profile.state||''}</div></div>
+    <div class="d-card gold-glow" style="animation-delay:0.25s"><div class="d-icon">🏦</div><div class="d-label">KCC</div><div class="d-value" style="font-size:16px">${profile.kcc==='Yes'?'✅ Active':'❌ None'}</div></div>
+    <div class="d-card gold-glow" style="animation-delay:0.3s"><div class="d-icon">📋</div><div class="d-label">PM-KISAN</div><div class="d-value" style="font-size:16px">${profile.pmkisan==='Yes'?'✅ Enrolled':'❌ Not Enrolled'}</div></div>
+    <div class="d-card wide sky-glow" style="animation-delay:0.35s"><div class="d-icon">🌐</div><div class="d-label">Digital Twin — Farm Visualization</div><canvas id="twinCanvas"></canvas></div>
+    <div class="d-card" style="animation-delay:0.4s"><div class="d-icon">🗣️</div><div class="d-label">AI Language</div><div class="d-value" style="font-size:14px">${langMap[activeLang]||'English'}</div></div>
+    <div class="d-card" style="animation-delay:0.45s"><div class="d-icon">🌿</div><div class="d-label">PMFBY Insurance</div><div class="d-value" style="font-size:16px">${profile.pmfby==='Yes'?'✅ Covered':'❌ Not Covered'}</div></div>
+    <div class="d-card" style="animation-delay:0.5s"><div class="d-icon">👤</div><div class="d-label">Farmer Age</div><div class="d-value">${profile.age||'—'} <span>yrs</span></div></div>
+    <div class="d-card" style="animation-delay:0.55s"><div class="d-icon">📞</div><div class="d-label">Phone</div><div class="d-value" style="font-size:15px">${profile.phone||'—'}</div></div>
+  `;
+  setTimeout(drawTwin,120);
+}
+
+function drawTwin(){
+  const c=document.getElementById('twinCanvas'); if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width=c.offsetWidth,H=c.height=180;
+  // Sky gradient
+  const sky=ctx.createLinearGradient(0,0,0,H*0.6);
+  sky.addColorStop(0,'#0a1a0c');sky.addColorStop(1,'#0f2e14');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+  // Farm patches
+  const acres=parseInt(profile.acres)||5,patches=Math.min(acres,12),pw=(W-40)/patches-6;
+  for(let i=0;i<patches;i++){
+    const x=20+i*(pw+6),y=H*0.55,h2=H*0.4;
+    ctx.fillStyle=`hsl(${110+i*3},${35+i%3*5}%,${18+i%4*3}%)`;ctx.fillRect(x,y,pw,h2);
+    ctx.strokeStyle='rgba(74,222,128,0.2)';ctx.lineWidth=1;
+    for(let r=0;r<5;r++){ctx.beginPath();ctx.moveTo(x,y+r*(h2/5));ctx.lineTo(x+pw,y+r*(h2/5));ctx.stroke();}
+    ctx.fillStyle='rgba(134,239,172,0.6)';ctx.font='9px DM Sans';ctx.fillText(`P${i+1}`,x+3,y+14);
+  }
+  // House
+  ctx.fillStyle='#1a3a1e';ctx.fillRect(W*0.82,H*0.42,50,35);
+  ctx.fillStyle='#2d5c35';ctx.beginPath();ctx.moveTo(W*0.80,H*0.42);ctx.lineTo(W*0.87+25,H*0.28);ctx.lineTo(W*0.84+50,H*0.42);ctx.fill();
+  // Trees
+  for(let t=0;t<6;t++){const tx=30+t*55,ty=H*0.5;ctx.fillStyle='#1a4020';ctx.beginPath();ctx.arc(tx,ty,14,0,Math.PI*2);ctx.fill();}
+  // Water body
+  ctx.fillStyle='rgba(56,189,248,0.3)';ctx.beginPath();ctx.ellipse(W*0.5,H*0.52,30,10,0,0,Math.PI*2);ctx.fill();
+  // Label
+  ctx.fillStyle='rgba(134,239,172,0.8)';ctx.font='bold 11px DM Sans';
+  ctx.fillText(`${profile.name}'s Farm — ${profile.acres||'?'} acres · ${profile.crop||'?'}`,20,18);
+}
+
+/* ════════════════════════════════════
+   SCHEMES
+════════════════════════════════════ */
+function buildSchemes(){
+  const g=document.getElementById('schemesGrid'); if(g.dataset.built)return; g.dataset.built=1; g.style.padding='20px';
+  const sc=[];
+  sc.push({name:'PM-KISAN',desc:'Direct income support of ₹2,000 directly to your bank every 4 months — no middlemen.',benefit:'₹6,000/year'});
+  if(profile.kcc!=='Yes')sc.push({name:'Kisan Credit Card (KCC)',desc:'Get instant crop production credit at just 4% interest — much cheaper than moneylenders.',benefit:'Up to ₹3 Lakh @ 4%'});
+  if(profile.pmfby!=='Yes')sc.push({name:'PMFBY Crop Insurance',desc:'Protect your entire crop from floods, drought, pests, and natural disasters.',benefit:'Full crop loss coverage'});
+  sc.push({name:'Soil Health Card',desc:'Free government soil testing with personalized fertilizer recommendations for your field.',benefit:'Free'});
+  sc.push({name:'PM Krishi Sinchai Yojana',desc:'Get heavily subsidized drip or sprinkler irrigation systems to save water and improve yield.',benefit:'55–90% subsidy'});
+  if(parseFloat(profile.acres)>=2)sc.push({name:'eNAM (Online Mandi)',desc:'Sell your produce directly to buyers across 1000+ mandis online — get the best price.',benefit:'Better price + transparency'});
+  if(profile.income==='below1'||profile.income==='1to3')sc.push({name:'PM Kisan MaanDhan Yojana',desc:'Guaranteed pension after age 60 by contributing just ₹55–₹200/month now.',benefit:'₹3,000/month pension'});
+  sc.push({name:'PM Fasal Bima Yojana',desc:'Additional crop insurance coverage for horticulture and commercial crops at low premiums.',benefit:'Premium as low as 1.5%'});
+  g.innerHTML=`
+    <h2 style="font-family:'Playfair Display',serif;margin-bottom:8px;color:var(--gold);">🏛️ Your Eligible Schemes</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Based on your profile — ${profile.name}, ${profile.acres} acres, ${profile.state}</p>
+    ${sc.map((s,i)=>`
+    <div class="scheme-card" style="animation:card-fade 0.5s ease ${i*0.07}s both;">
+      <div class="scheme-name">${s.name}</div>
+      <div class="scheme-desc">${s.desc}</div>
+      <div style="margin-top:6px;font-size:12px;color:var(--muted);">💰 Benefit: <strong style="color:var(--text)">${s.benefit}</strong></div>
+      <div class="scheme-badge">✅ You are eligible</div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="quickAsk('How do I apply for ${s.name} step by step?')"
+          style="background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:6px;
+          padding:6px 14px;font-size:12px;color:var(--green);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;"
+          onmouseover="this.style.background='rgba(74,222,128,0.2)'" onmouseout="this.style.background='rgba(74,222,128,0.1)'">
+          Ask AI how to apply →
+        </button>
+        <button onclick="quickAsk('What documents do I need for ${s.name}?')"
+          style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:6px;
+          padding:6px 14px;font-size:12px;color:var(--gold);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;"
+          onmouseover="this.style.background='rgba(251,191,36,0.15)'" onmouseout="this.style.background='rgba(251,191,36,0.08)'">
+          📄 Documents needed
+        </button>
+      </div>
+    </div>`).join('')}`;
+}
+
+/* ════════════════════════════════════
+   WEATHER
+════════════════════════════════════ */
+async function buildWeather(){
+  const g=document.getElementById('weatherGrid'); if(g.dataset.built)return; g.dataset.built=1;
+  g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);">🌤️ Fetching weather data…</div>';
+  const loc=profile.location||profile.village||'Chennai';
+  try{
+    const geo=await(await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(loc)}&count=1`)).json();
+    const r=geo.results?.[0]; if(!r)throw new Error('Location not found');
+    const w=await(await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${r.latitude}&longitude=${r.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&timezone=auto&forecast_days=7`)).json();
+    const cur=w.current,daily=w.daily,wd=wCode(cur.weather_code);
+    document.getElementById('sbWTemp').textContent=Math.round(cur.temperature_2m)+'°C';
+    document.getElementById('sbWDesc').textContent=wd.label;
+    const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const fc=daily.time.map((t,i)=>({
+      day:i===0?'Today':days[new Date(t).getDay()],
+      max:Math.round(daily.temperature_2m_max[i]),
+      min:Math.round(daily.temperature_2m_min[i]),
+      rain:daily.precipitation_sum[i],
+      icon:wCode(daily.weather_code[i]).icon
+    }));
+    g.innerHTML=`
+      <div class="d-card wide weather-big sky-glow" style="grid-column:span 3">
+        <div class="d-label">📍 ${r.name}, ${r.country_code} · Live Weather</div>
+        <div class="w-main">
+          <div>
+            <div class="w-temp">${Math.round(cur.temperature_2m)}°C</div>
+            <div style="font-size:18px;font-weight:600;color:var(--sky);margin-top:4px">${wd.label}</div>
+          </div>
+          <div class="w-icon">${wd.icon}</div>
+        </div>
+        <div class="w-details">
+          <div class="w-detail"><strong>${cur.relative_humidity_2m}%</strong>Humidity</div>
+          <div class="w-detail"><strong>${cur.wind_speed_10m} km/h</strong>Wind Speed</div>
+          <div class="w-detail"><strong>${cur.precipitation} mm</strong>Precipitation</div>
+        </div>
+      </div>
+      ${fc.map((d,i)=>`
+      <div class="d-card" style="animation-delay:${i*0.06}s">
+        <div style="font-size:22px">${d.icon}</div>
+        <div class="d-label">${d.day}</div>
+        <div class="d-value">${d.max}°<span>/ ${d.min}°</span></div>
+        <div class="d-sub">🌧 ${d.rain} mm</div>
+      </div>`).join('')}
+      <div class="d-card wide" style="grid-column:span 3;animation-delay:0.5s">
+        <div class="d-icon">🌾</div>
+        <div class="d-label">Today's Farming Advisory</div>
+        <div class="d-sub" style="font-size:13px;line-height:1.8;margin-top:8px">${wAdv(cur)}</div>
+        <button onclick="quickAsk('Based on today\\'s weather, what farming activities should I do?')"
+          style="margin-top:12px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);
+          border-radius:8px;padding:8px 16px;font-size:12px;color:var(--green);cursor:pointer;font-family:'DM Sans',sans-serif;">
+          🤖 Ask AI for detailed advice →
+        </button>
+      </div>`;
+  }catch(e){
+    g.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--red);">
+      ⚠️ Could not load weather for "${loc}". 
+      <br><br><button onclick="quickAsk('What is the weather forecast in ${loc} today?')"
+        style="background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);border-radius:8px;
+        padding:8px 16px;font-size:12px;color:var(--green);cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;">
+        Ask AI instead →
+      </button>
+    </div>`;
+  }
+}
+
+function wCode(c){
+  if(c===0)return{label:'Clear Sky',icon:'☀️'};
+  if(c<=3)return{label:'Partly Cloudy',icon:'⛅'};
+  if(c<=48)return{label:'Foggy',icon:'🌫️'};
+  if(c<=67)return{label:'Rain',icon:'🌧️'};
+  if(c<=77)return{label:'Snow',icon:'❄️'};
+  if(c<=82)return{label:'Rain Showers',icon:'🌦️'};
+  return{label:'Thunderstorm',icon:'⛈️'};
+}
+
+function wAdv(cur){
+  const t=[];
+  if(cur.temperature_2m>38)t.push('🌡️ Very hot today — irrigate only in early morning (before 7am) or evening (after 6pm) to avoid evaporation.');
+  else if(cur.temperature_2m>30)t.push('☀️ Warm conditions — monitor soil moisture levels, especially for young plants.');
+  if(cur.temperature_2m<10)t.push('🥶 Cold nights ahead — protect seedlings and young crops with mulch or plastic covers.');
+  if(cur.relative_humidity_2m>80)t.push(`💦 High humidity (${cur.relative_humidity_2m}%) — watch closely for fungal diseases like blight or mildew in ${profile.crop||'your crop'}.`);
+  if(cur.wind_speed_10m>30)t.push('💨 Strong winds today — delay pesticide or fertilizer spraying to avoid drift and waste.');
+  else if(cur.wind_speed_10m>15)t.push('🌬️ Moderate wind — good for drying harvested grain, but monitor for lodging in tall crops.');
+  if(cur.precipitation>5)t.push('🌧️ Significant rainfall — hold off on irrigation. Check for waterlogging in low-lying fields.');
+  else if(cur.precipitation>0)t.push('🌦️ Light rain expected — good for recently sown seeds. No irrigation needed today.');
+  if(!t.length)t.push('✅ Excellent farming conditions today! Great time for field inspection, weeding, or applying fertilizers.');
+  return t.join('<br>');
+}
+
+function logout(){localStorage.removeItem('farmerProfile');window.location.href='registration.html';}
+
+/* ════════════════════════════════════
+   LUSH ANIMATED BACKGROUND
+════════════════════════════════════ */
+const bgC=document.getElementById('bgCanvas');
+const bgX=bgC.getContext('2d');
+let W,H,blades=[],fireflies=[],clouds=[],birds=[],tick=0;
+function rnd(a,b){return a+Math.random()*(b-a);}
+
+function resize(){
+  W=bgC.width=window.innerWidth;
+  H=bgC.height=window.innerHeight;
+  initScene();
+}
+
+function initScene(){
+  const groundY=H*0.79;
+  blades=[];
+  const count=Math.floor(W/3);
+  for(let i=0;i<count;i++){
+    const layer=Math.floor(rnd(0,3));
+    const tallness=[0.5,0.75,1][layer];
+    blades.push({
+      x:rnd(0,W),y:groundY+rnd(0,H*0.055),
+      h:rnd(28,155)*tallness,bw:rnd(2,4.5)*(0.5+tallness*0.5),
+      hue:rnd(100,138),sat:rnd(38,70),lit:rnd(10,38)*(0.5+tallness*0.6),
+      phase:rnd(0,Math.PI*2),spd:rnd(0.25,0.9),sway:rnd(3,22)*tallness,segs:7,layer
+    });
+  }
+  blades.sort((a,b)=>a.layer-b.layer);
+  fireflies=Array.from({length:32},(_,i)=>({
+    x:rnd(0,W),y:rnd(H*0.28,H*0.78),
+    vx:rnd(-0.25,0.25),vy:rnd(-0.35,-0.05),
+    life:rnd(0,200),maxLife:rnd(100,280),
+    size:rnd(1.5,3.8),hue:rnd(88,155),phase:i*0.65
+  }));
+  clouds=Array.from({length:6},()=>({x:rnd(0,W),y:rnd(H*0.04,H*0.22),w:rnd(100,260),h:rnd(28,55),spd:rnd(0.06,0.2),alpha:rnd(0.03,0.1)}));
+  birds=Array.from({length:5},()=>({x:rnd(0,W),y:rnd(H*0.06,H*0.28),spd:rnd(0.35,0.85),size:rnd(5,10),fp:rnd(0,Math.PI*2)}));
+}
+
+function frame(){
+  tick+=0.4;
+  const sky=bgX.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#010804');sky.addColorStop(0.3,'#040f06');sky.addColorStop(0.65,'#091e0c');sky.addColorStop(1,'#0d2b10');
+  bgX.fillStyle=sky;bgX.fillRect(0,0,W,H);
+  for(let s=0;s<90;s++){
+    const sx=((s*137.508+41)%W),sy=((s*83.1+29)%(H*0.54));
+    const tw=0.25+0.75*Math.abs(Math.sin(tick*0.018+s*0.71));
+    bgX.beginPath();bgX.arc(sx,sy,s%4===0?1.3:0.65,0,Math.PI*2);
+    bgX.fillStyle=`rgba(240,240,210,${tw*0.7})`;bgX.fill();
+  }
+  const mx=W*0.83,my=H*0.09;
+  const mg=bgX.createRadialGradient(mx,my,0,mx,my,100);
+  mg.addColorStop(0,'rgba(254,243,148,0.20)');mg.addColorStop(0.5,'rgba(254,243,148,0.06)');mg.addColorStop(1,'transparent');
+  bgX.fillStyle=mg;bgX.fillRect(0,0,W,H);
+  bgX.beginPath();bgX.arc(mx,my,27,0,Math.PI*2);bgX.fillStyle='rgba(255,247,160,0.9)';bgX.fill();
+  bgX.beginPath();bgX.arc(mx+12,my-5,22,0,Math.PI*2);bgX.fillStyle='rgba(2,8,3,0.92)';bgX.fill();
+  bgX.beginPath();bgX.moveTo(0,H*0.73);
+  for(let i=0;i<=14;i++){const hx=(i/14)*W,hy=H*0.73-Math.sin(i*0.85+1.1)*H*0.1-Math.sin(i*0.38+0.5)*H*0.046;bgX.lineTo(hx,hy);}
+  bgX.lineTo(W,H);bgX.lineTo(0,H);bgX.closePath();bgX.fillStyle='#030b04';bgX.fill();
+  const grd=bgX.createLinearGradient(0,H*0.75,0,H);grd.addColorStop(0,'#071308');grd.addColorStop(1,'#020704');bgX.fillStyle=grd;bgX.fillRect(0,H*0.75,W,H*0.25);
+  for(let m=0;m<3;m++){const bx=((tick*0.22+m*380)%(W+700))-350,by=H*0.71+m*14;const mist=bgX.createRadialGradient(bx,by,0,bx,by,240);mist.addColorStop(0,'rgba(74,222,128,0.04)');mist.addColorStop(1,'transparent');bgX.fillStyle=mist;bgX.fillRect(0,0,W,H);}
+  clouds.forEach(cl=>{cl.x+=cl.spd;if(cl.x>W+cl.w)cl.x=-cl.w;bgX.save();bgX.globalAlpha=cl.alpha;bgX.fillStyle='#8ecf8e';bgX.beginPath();bgX.ellipse(cl.x,cl.y,cl.w*0.5,cl.h*0.5,0,0,Math.PI*2);bgX.fill();bgX.beginPath();bgX.ellipse(cl.x+cl.w*0.26,cl.y-cl.h*0.18,cl.w*0.35,cl.h*0.38,0,0,Math.PI*2);bgX.fill();bgX.beginPath();bgX.ellipse(cl.x-cl.w*0.24,cl.y-cl.h*0.12,cl.w*0.3,cl.h*0.32,0,0,Math.PI*2);bgX.fill();bgX.restore();});
+  birds.forEach(b=>{b.x+=b.spd;if(b.x>W+20)b.x=-20;b.fp+=0.09;const fl=Math.sin(b.fp)*b.size*0.55;bgX.save();bgX.globalAlpha=0.32;bgX.strokeStyle='#86efac';bgX.lineWidth=1.4;bgX.lineCap='round';bgX.beginPath();bgX.moveTo(b.x-b.size,b.y+fl);bgX.quadraticCurveTo(b.x,b.y,b.x+b.size,b.y+fl);bgX.stroke();bgX.restore();});
+  blades.forEach(b=>{
+    const wind=Math.sin(tick*b.spd*0.033+b.phase);
+    const totalSway=wind*b.sway;
+    const pts=[];
+    for(let s=0;s<=b.segs;s++){
+      const t=s/b.segs,sw=totalSway*t*t,lean=t*t*b.sway*0.12;
+      pts.push({x:b.x+sw+lean,y:b.y-t*b.h,w:b.bw*Math.pow(1-t,1.5)});
+    }
+    bgX.beginPath();
+    bgX.moveTo(pts[0].x-pts[0].w*0.5,pts[0].y);
+    for(let s=1;s<pts.length;s++)bgX.lineTo(pts[s].x-pts[s].w*0.5,pts[s].y);
+    bgX.lineTo(pts[pts.length-1].x,pts[pts.length-1].y-1);
+    for(let s=pts.length-1;s>=0;s--)bgX.lineTo(pts[s].x+pts[s].w*0.5,pts[s].y);
+    bgX.closePath();
+    const g2=bgX.createLinearGradient(b.x,b.y,b.x+totalSway*0.6,b.y-b.h);
+    g2.addColorStop(0,`hsl(${b.hue},${b.sat}%,${b.lit*0.55}%)`);
+    g2.addColorStop(0.45,`hsl(${b.hue},${b.sat}%,${b.lit}%)`);
+    g2.addColorStop(1,`hsl(${b.hue+10},${Math.min(b.sat+15,100)}%,${b.lit+16}%)`);
+    bgX.fillStyle=g2;bgX.fill();
+    if(b.layer===2&&b.bw>3.2){bgX.beginPath();bgX.moveTo(pts[0].x,pts[0].y);pts.forEach(p=>bgX.lineTo(p.x,p.y));bgX.strokeStyle=`hsla(${b.hue+12},${b.sat}%,${b.lit+22}%,0.28)`;bgX.lineWidth=0.7;bgX.stroke();}
+  });
+  fireflies.forEach(p=>{
+    p.x+=p.vx+Math.sin(tick*0.018+p.phase)*0.28;p.y+=p.vy;p.life++;
+    if(p.life>p.maxLife||p.y<H*0.12){p.x=rnd(0,W);p.y=rnd(H*0.5,H*0.78);p.vx=rnd(-0.25,0.25);p.vy=rnd(-0.35,-0.05);p.life=0;p.maxLife=rnd(100,280);}
+    const fade=Math.sin((p.life/p.maxLife)*Math.PI),pulse=0.5+0.5*Math.sin(tick*0.075+p.phase);
+    bgX.save();bgX.globalAlpha=fade*pulse*0.88;
+    const fg=bgX.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size*4);fg.addColorStop(0,`hsl(${p.hue},90%,76%)`);fg.addColorStop(1,'transparent');bgX.fillStyle=fg;bgX.beginPath();bgX.arc(p.x,p.y,p.size*4,0,Math.PI*2);bgX.fill();
+    bgX.globalAlpha=fade*pulse;bgX.fillStyle=`hsl(${p.hue},98%,88%)`;bgX.beginPath();bgX.arc(p.x,p.y,p.size*0.65,0,Math.PI*2);bgX.fill();bgX.restore();
+  });
+  requestAnimationFrame(frame);
+}
+
+window.addEventListener('resize',resize);
+resize();
+frame();
+/* ================= AI + SENSOR SYSTEM ================= */
+
+// LOAD ALERTS
+async function loadAlerts(){
+  try{
+    const res = await fetch("http://localhost:3000/notifications");
+    const data = await res.json();
+    renderBotNotificationPopups(data);
+
+    const box = document.getElementById("alertsBox");
+    if(!box) return;
+
+    box.innerHTML = "";
+
+    data.slice(-10).reverse().forEach(a=>{
+      const div = document.createElement("div");
+      div.className = "alert-item";
+
+      div.innerHTML = `
+        <b>⏰ ${new Date(a.time).toLocaleTimeString()}</b><br>
+        ${a.msg}
+      `;
+
+      box.appendChild(div);
+    });
+
+  }catch(e){
+    console.log("Alert load error:", e);
+  }
+}
+
+
+// LOAD AI ANALYSIS
+async function loadAnalysis(){
+  try{
+    const res = await fetch("http://localhost:3000/sensor-history");
+    const data = await res.json();
+
+    const box = document.getElementById("analysisBox");
+    if(!box) return;
+
+    box.innerHTML = "";
+
+    data.slice(-5).reverse().forEach(a=>{
+      const div = document.createElement("div");
+      div.className = "analysis-item";
+
+      div.innerHTML = `
+        <b>⏰ ${new Date(a.time).toLocaleTimeString()}</b><br>
+        <pre style="white-space:pre-wrap;">${a.result}</pre>
+      `;
+
+      box.appendChild(div);
+    });
+
+  }catch(e){
+    console.log("Analysis load error:", e);
+  }
+}
+
+
+// WEATHER ALERT
+async function loadWeather(){
+  try{
+    const res = await fetch("http://localhost:3000/weather-alert");
+    const data = await res.json();
+
+    const box = document.getElementById("weatherBox");
+    if(!box) return;
+
+    box.innerHTML = `
+      <div class="analysis-item">
+        ${data.msg}
+      </div>
+    `;
+
+  }catch(e){
+    console.log("Weather load error:", e);
+  }
+}
+
+// AUTO REFRESH (EVERY 10 SEC)
+setInterval(()=>{
+  loadAlerts();
+  loadAnalysis();
+  loadWeather();
+  if(document.getElementById('panel-farmwealth')?.classList.contains('active')){
+    buildFarmWealth();
+  }
+},10000);
+
+
+// INITIAL LOAD
+setTimeout(()=>{
+  loadAlerts();
+  loadAnalysis();
+  loadWeather();
+},2000);
+// Fetch weather for sidebar on load
+(async()=>{
+  const loc=profile.location||profile.village||'Chennai';
+  try{
+    const geo=await(await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(loc)}&count=1`)).json();
+    const r=geo.results?.[0];if(!r)return;
+    const w=await(await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${r.latitude}&longitude=${r.longitude}&current=temperature_2m,weather_code&timezone=auto`)).json();
+    document.getElementById('sbWTemp').textContent=Math.round(w.current.temperature_2m)+'°C';
+    document.getElementById('sbWDesc').textContent=wCode(w.current.weather_code).label+' '+wCode(w.current.weather_code).icon;
+  }catch(e){}
+})();
+
+function googleTranslateElementInit(){
+  new google.translate.TranslateElement(
+    {
+      pageLanguage:'en',
+      includedLanguages:'en,hi,ta,te,kn,ml,gu,mr,bn,pa,ur,or,de,fr,es,it,pt,ru,zh-CN,ja,ko,ar,tr,nl,pl,sv,no,da,fi,cs,el,he,th,vi,id,ms,uk,ro,hu',
+      layout:google.translate.TranslateElement.InlineLayout.SIMPLE
+    },
+    'google_translate_element'
+  );
+  setTimeout(() => {
+    const combo = document.querySelector('#google_translate_element .goog-te-combo');
+    if(!combo) return;
+    combo.addEventListener('change', () => {
+      setTimeout(() => {
+        pickJarvisVoice();
+        updateVoiceStatus();
+      }, 300);
+    });
+  }, 700);
+}
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+</body>
+</html>

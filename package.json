@@ -1,0 +1,55 @@
+{
+  "name": "smart-farming-project",
+  "version": "1.0.0",
+  "description": "IoT-based agricultural monitoring system with AI-powered crop analysis",
+  "author": "Smart Farming Project Contributors",
+  "license": "MIT",
+  "main": "main.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "start": "node main.js",
+    "dev": "node --watch main.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "keywords": [
+    "agriculture",
+    "IoT",
+    "smart-farming",
+    "sensors",
+    "ESP32",
+    "agriculture-monitoring",
+    "crop-analysis",
+    "AI",
+    "Groq"
+  ],
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "groq-sdk": "^0.5.0",
+    "body-parser": "^1.20.2",
+    "axios": "^1.6.0",
+    "socket.io": "^4.7.0",
+    "winston": "^3.11.0",
+    "joi": "^17.11.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.52.0",
+    "prettier": "^3.0.3",
+    "nodemon": "^3.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/smart-farming-project"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/smart-farming-project/issues"
+  },
+  "homepage": "https://github.com/yourusername/smart-farming-project#readme"
+}

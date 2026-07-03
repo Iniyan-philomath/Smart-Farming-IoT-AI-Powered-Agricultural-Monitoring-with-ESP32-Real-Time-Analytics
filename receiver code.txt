@@ -1,0 +1,87 @@
+#include <esp_now.h>
+#include <WiFi.h>
+
+// Data structure (MUST match sender)
+typedef struct struct_message {
+    float temp;
+    float hum;
+    int soil;
+    int rain;
+} struct_message;
+
+struct_message incomingData;
+
+// Callback function
+void OnDataRecv(const esp_now_recv_info_t * recv_info, const uint8_t *data, int len) {
+
+  static unsigned long lastPrintTime = 0;
+  unsigned long currentTime = millis();
+
+  // ⛔ Limit output to once every 5 seconds
+  if (currentTime - lastPrintTime < 5000) {
+    return;
+  }
+
+  lastPrintTime = currentTime;
+
+  // ✅ Safety check
+  if (len != sizeof(incomingData)) {
+    Serial.println("Data size mismatch!");
+    return;
+  }
+
+  // Copy received data
+  memcpy(&incomingData, data, sizeof(incomingData));
+
+  // ✅ Added machine-readable line for terminal/python parser
+  Serial.printf("SENSOR_DATA:%.2f,%.2f,%d,%d\n",
+                incomingData.temp, incomingData.hum,
+                incomingData.soil, incomingData.rain);
+
+  // ✅ CLEAN HUMAN-READABLE OUTPUT
+  Serial.println("\n--- RECEIVED FIELD DATA ---");
+
+  Serial.print("Temperature: ");
+  Serial.print(incomingData.temp);
+  Serial.println(" °C");
+
+  Serial.print("Humidity:    ");
+  Serial.print(incomingData.hum);
+  Serial.println(" %");
+
+  Serial.print("Soil Status: ");
+  if (incomingData.soil == 1) {
+    Serial.println("DRY");
+  } else {
+    Serial.println("WET");
+  }
+
+  Serial.print("Rain Level:  ");
+  Serial.print(incomingData.rain);
+  Serial.println(" %");
+
+  Serial.println("Transmission Status: SUCCESS");
+  Serial.println("----------------------------");
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // Set device as Wi-Fi Station
+  WiFi.mode(WIFI_STA);
+
+  // Initialize ESP-NOW
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("ESP-NOW Init Failed");
+    return;
+  }
+
+  // Register receive callback (latest version)
+  esp_now_register_recv_cb(OnDataRecv);
+
+  Serial.println("Receiver Ready...");
+}
+
+void loop() {
+  // Nothing needed here
+}
