@@ -1,0 +1,2 @@
+# Smart-Farming-IoT-AI-Powered-Agricultural-Monitoring-with-ESP32-Real-Time-Analytics
+An open-source IoT platform for precision agriculture. Features multi-sensor monitoring (Soil pH, Moisture, Temp, etc.) using ESP32, integrated with Groq AI for intelligent crop disease diagnosis and data-driven farming insights. A full-stack solution designed to optimize yields, reduce waste, and empower farmers with real-time intelligence.
